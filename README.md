@@ -87,12 +87,6 @@ Create a `.env` file in the root of your project:
 npx expo start
 ```
 
-### 📁 Why I Used File Picker Instead of Camera Roll
-
-
-To ensure consistent `.mp4` support and reliable access to video files, I chose to use `expo-document-picker`. This opens the device's **file directory** instead of the photo gallery, allowing users to explicitly select `.mp4` files. 
-The result is a smoother, more predictable video upload experience for the user.
-
 
 ### 🧠 Tech Stack
 
@@ -115,6 +109,11 @@ To reduce false positives caused by noise or similar-looking shapes (known as **
 - Only applies the blur once that confidence threshold is met
 
 This ensures the blur is only applied if the watermark is **consistently detected** over time — increasing accuracy and avoiding unnecessary modifications.
+
+### 📁 Why I Used File Picker Instead of Camera Roll
+
+To ensure consistent `.mp4` support and reliable access to video files, I chose to use `expo-document-picker`. This opens the device's **file directory** instead of the photo gallery, allowing users to explicitly select `.mp4` files. 
+The result is a smoother, more predictable video upload experience for the user.
 
 ### 📸 How to Use the App
 
