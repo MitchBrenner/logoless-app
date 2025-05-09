@@ -1,3 +1,5 @@
 # Python virtual environments
 .venv/
 backend/.venv/
+.env
+.env.local

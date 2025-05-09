@@ -8,6 +8,10 @@ from .processing.blur_watermark import blur_watermark_with_opencv
 
 app = FastAPI()
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Video Processing API!"}
+
 @app.post("/process-video")
 async def process_video(
     file: UploadFile = File(...),
