@@ -66,19 +66,6 @@ def detect_watermark_in_roi(
 
     # If a match was found, draw and show the result
     if matched_frame is not None:
-        # Draw ROI again
-        # cv2.rectangle(matched_frame,
-        #               (roi_x, roi_y),
-        #               (roi_x + roi_w, roi_y + roi_h),
-        #               (255, 0, 0), 2)
-        # # Draw watermark bounding box (green)
-        # bottom_right = (matched_loc[0] + w, matched_loc[1] + h)
-        # cv2.rectangle(matched_frame,
-        #               matched_loc,
-        #               bottom_right,
-        #               (0, 255, 0), 3)
-        # cv2.imshow('ROI and Detected Watermark', matched_frame)
-        # cv2.waitKey(0)
         cv2.destroyAllWindows()
         return True, (matched_loc[0], matched_loc[1], w, h)
     else:

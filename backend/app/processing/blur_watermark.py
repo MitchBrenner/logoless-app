@@ -1,5 +1,31 @@
 import cv2
 
+
+"""
+    Detects the location of a watermark in the specified region of a video
+    using OpenCV template matching.
+
+    This function scans multiple frames to confirm the presence of the
+    watermark with a consistent confidence level, reducing false positives
+    from random matches.
+
+    Args:
+        video_path (str): Path to the input video file.
+        template_path (str): Path to the cropped watermark image template.
+        method (int): OpenCV matching method (e.g. cv2.TM_CCORR).
+        threshold (float): Match confidence threshold.
+        max_frames (int): Max number of frames to scan.
+        roi_x (int): X coordinate of the top-left corner of the ROI.
+        roi_y (int): Y coordinate of the top-left corner of the ROI.
+        roi_w (int or None): Width of the ROI. Defaults to template width + 5.
+        roi_h (int or None): Height of the ROI. Defaults to template height + 5.
+        min_hits (int): Number of confident matches required to confirm detection.
+
+    Returns:
+        Tuple[bool, Tuple[int, int, int, int] or None]:
+            - True and bounding box (x, y, w, h) if watermark is detected
+            - False and None if no watermark is found
+"""
 def detect_watermark_in_roi(
     video_path,
     template_path,
@@ -112,8 +138,8 @@ def blur_watermark_with_opencv(
 
         # After 5 seconds, switch to new position
         if frame_index >= blur_switch_frame:
-            current_x = width - w + 20  # move more to the right
-            current_y = height - h - 120  # move slightly higher
+            current_x = width - w + 20 
+            current_y = height - h - 120 
 
         roi = frame[current_y:current_y + h, current_x:current_x + w]
         blurred = cv2.GaussianBlur(roi, blur_ksize, blur_sigma)
