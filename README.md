@@ -129,3 +129,6 @@ The result is a smoother, more predictable video upload experience for the user.
 - The backend includes logic to move the blur region after 5 seconds, mimicking the tik tok watermark animation
 - If no watermark is detected, the server responds with { "success": false } — and the app alerts the user
 
+### Improvements
+- Document code
+
