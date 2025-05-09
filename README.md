@@ -38,7 +38,7 @@ LogoLess is a full-stack mobile app that allows users to upload TikTok videos an
 
 ### Clone the repository to your device:
 ```bash
-git clone https://github.com/your-username/logoless.git
+git clone https://github.com/mitchbrenner/logoless.git
 cd logoless
 ```
 
