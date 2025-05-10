@@ -1,4 +1,5 @@
 import cv2
+from collections import Counter
 
 
 """
@@ -24,34 +25,34 @@ import cv2
     Returns:
         Tuple[bool, Tuple[int, int, int, int] or None]:
             - True and bounding box (x, y, w, h) if watermark is detected
-            - False and None if no watermark is found
+            - False and None if no watermark is founde
 """
 def detect_watermark_in_roi(
     video_path,
     template_path,
     method=cv2.TM_CCORR,
     threshold=0.9,
-    max_frames=1000,
+    max_frames=360,
     roi_x=0,
-    roi_y=425,
+    roi_y=0,
     roi_w=None,
     roi_h=None,
-    min_hits=300
+    min_hits=50
 ):
+    # Load template in grayscale
     template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
     if template is None:
         raise FileNotFoundError(f"Template not found: {template_path}")
     w, h = template.shape
-
-    if roi_w is None:
-        roi_w = w + 5
-    if roi_h is None:
-        roi_h = h + 5
+    positions = []
 
     video = cv2.VideoCapture(video_path)
-    hits = 0
-    matched_frame = None
-    matched_loc = None
+
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # Set ROI 
+    roi_w = w + 5
+    roi_h = (height - h)
 
     frame_index = 0
     while video.isOpened():
@@ -61,53 +62,52 @@ def detect_watermark_in_roi(
 
         frame_index += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        roi = gray[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
+        roi = gray[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
+
 
         res = cv2.matchTemplate(roi, template, method)
         _, max_val, _, max_loc = cv2.minMaxLoc(res)
 
         if max_val >= threshold:
-            hits += 1
-            if hits >= min_hits:
-                matched_loc = (roi_x + max_loc[0], roi_y + max_loc[1])
-                matched_frame = frame.copy()
-                break
+            # Record the absolute location of each match
+            absolute_loc = (roi_x + max_loc[0], roi_y + max_loc[1])
+            positions.append(absolute_loc)
+
+            # IF you want to see the matches in the video, uncomment the following lines
+            # cv2.rectangle(
+            #     frame,
+            #     (absolute_loc[0], absolute_loc[1]),
+            #     (absolute_loc[0] + w, absolute_loc[1] + h),
+            #     (0, 255, 0),
+            #     2
+            # )
+        # cv2.imshow('Video', frame)
+        # cv2.waitKey(1)
 
     video.release()
 
-    if matched_frame is not None:
-        return True, (matched_loc[0], matched_loc[1], w, h)
-    else:
-        print('No watermark detected in the specified ROI.')
-        return False, None
+    # Determine if most frequent match hits the threshold
+    if positions:
+        most_common_loc, count = Counter(positions).most_common(1)[0]
+        if count >= min_hits:
+            x, y = most_common_loc
+            return True, (x, y, w, h)
+    print('No watermark detected in the specified ROI.')
+    return False, None
 
 
 def blur_watermark_with_opencv(
     input_video_path: str,
     output_video_path: str,
     template_path: str,
-    method=cv2.TM_CCORR,
-    threshold=0.9,
-    max_frames=1000,
-    roi_x=0,
-    roi_y=425,
-    roi_w=None,
-    roi_h=None,
-    min_hits=300,
     blur_ksize=(0, 0),
-    blur_sigma=15
+    blur_sigma=12
 ) -> bool:
     found, coords = detect_watermark_in_roi(
         input_video_path,
         template_path,
-        method=method,
-        threshold=threshold,
-        max_frames=max_frames,
-        roi_x=roi_x,
-        roi_y=roi_y,
-        roi_w=roi_w,
-        roi_h=roi_h,
-        min_hits=min_hits
+
+
     )
     if not found:
         print("No watermark detected; skipping blur.")
@@ -126,7 +126,7 @@ def blur_watermark_with_opencv(
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
 
     frame_index = 0
-    blur_switch_frame = int(fps * 5)  # 5 seconds in
+    blur_switch_frame = int(fps * 5) + 1  # 5 seconds in
 
     while True:
         ret, frame = cap.read()
@@ -155,6 +155,8 @@ def blur_watermark_with_opencv(
     return True
 
 
+
+# Example usage to test the function
 if __name__ == "__main__":
     INPUT = "data/raw/tiktok1.mp4"
     OUTPUT = "data/processed/blur_opencv.mp4"
