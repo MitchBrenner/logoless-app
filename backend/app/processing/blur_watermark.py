@@ -47,7 +47,7 @@ def detect_watermark_in_roi(
     positions = []
 
     video = cv2.VideoCapture(video_path)
-
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Set ROI 
@@ -106,8 +106,6 @@ def blur_watermark_with_opencv(
     found, coords = detect_watermark_in_roi(
         input_video_path,
         template_path,
-
-
     )
     if not found:
         print("No watermark detected; skipping blur.")
