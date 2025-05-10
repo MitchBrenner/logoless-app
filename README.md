@@ -18,9 +18,9 @@ LogoLess is a full-stack mobile app that allows users to upload TikTok videos an
 ### 🎬 Demo
 
 <p float="left">
-  <img src="demo1.gif" width="250" alt="Original video" />
-  <img src="demo2.gif" width="250" alt="Watermark detection overlay" />
-  <img src="demo3.gif" width="250" alt="Final blurred output" />
+  <img src="demo_1.gif" width="250" alt="Original video" />
+  <img src="demo_2.gif" width="250" alt="Watermark detection overlay" />
+  <img src="demo_3.gif" width="250" alt="Final blurred output" />
 </p>
 
 ## 🧠 Tech Stack
