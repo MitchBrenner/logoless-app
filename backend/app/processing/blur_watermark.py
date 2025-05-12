@@ -1,5 +1,8 @@
 import cv2
 from collections import Counter
+import easyocr
+import numpy as np
+import pytesseract
 
 
 """
@@ -153,6 +156,63 @@ def blur_watermark_with_opencv(
     return True
 
 
+# TODO: update args 
+def detect_username(img_path):
+    # 1. Load original (for drawing) and gray for OCR
+    img = cv2.imread(img_path)
+    if img is None:
+        raise FileNotFoundError(f"Image not found: {img_path}")
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # 2. Get word-level OCR data
+    data = pytesseract.image_to_data(
+        gray,
+        output_type=pytesseract.Output.DICT,
+        config='--psm 6'  # single uniform block
+    )
+
+    # 3. Scan for standalone '@'
+    n = len(data['text'])
+    for i in range(n):
+        if data['text'][i].strip() == "@" and i + 1 < n:
+            # get '@' box
+            x0, y0, w0, h0 = (data['left'][i], data['top'][i],
+                              data['width'][i], data['height'][i])
+            # get username box
+            x1, y1, w1, h1 = (data['left'][i+1], data['top'][i+1],
+                              data['width'][i+1], data['height'][i+1])
+
+            # compute a bounding box that covers both
+            x = x0
+            y = min(y0, y1)
+            w = (x1 + w1) - x0
+            h = max(y0 + h0, y1 + h1) - y
+
+            username = data['text'][i+1].strip()
+            print("Username detected:", username, "at", (x, y, w, h))
+
+            # 4. Draw rectangle and label
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(
+                img,
+                f"@{username}",
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 255, 0),
+                2
+            )
+
+            # 5. Show and return
+            cv2.imshow("Username Detection", img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            return (x, y, w, h)
+
+    print("No username detected.")
+    return None
+
+
 
 # Example usage to test the function
 if __name__ == "__main__":
@@ -160,5 +220,6 @@ if __name__ == "__main__":
     OUTPUT = "data/processed/blur_opencv.mp4"
     TEMPLATE = "assets/templates/tiktok_watermark_cropped.png"
 
-    success = blur_watermark_with_opencv(INPUT, OUTPUT, TEMPLATE)
-    print("Success:", success)
+    # success = blur_watermark_with_opencv(INPUT, OUTPUT, TEMPLATE)
+    # print("Success:", success)
+    detect_username("data/raw/tiktok_img.png")
