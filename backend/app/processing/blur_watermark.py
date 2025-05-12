@@ -104,12 +104,13 @@ def blur_watermark_with_opencv(
     output_video_path: str,
     template_path: str,
     blur_ksize=(0, 0),
-    blur_sigma=12
+    blur_sigma=5
 ) -> bool:
-    found, coords = detect_watermark_in_roi(
-        input_video_path,
-        template_path,
-    )
+    # found, coords = detect_watermark_in_roi(
+    #     input_video_path,
+    #     template_path,
+    # )
+    found, coords = detect_username(input_video_path)
     if not found:
         print("No watermark detected; skipping blur.")
         return False
@@ -133,14 +134,20 @@ def blur_watermark_with_opencv(
         ret, frame = cap.read()
         if not ret:
             break
-
+        
         # Default location (initial watermark position)
         current_x, current_y = x, y
 
+        # Uncomment to see the rectangle drawn on the video
+        # cv2.rectangle(frame, (current_x, current_y), (current_x + w, current_y + h), (0, 255, 0), 2)
+
         # After 5 seconds, switch to new position
         if frame_index >= blur_switch_frame:
-            current_x = width - w + 20 
-            current_y = height - h - 120 
+            current_x = width - w - 8
+            current_y = height - h - 162
+
+            # Uncomment to see the rectangle drawn on the video 
+            # cv2.rectangle(frame, (current_x, current_y), (current_x + w, current_y + h), (0, 255, 0), 2)
 
         roi = frame[current_y:current_y + h, current_x:current_x + w]
         blurred = cv2.GaussianBlur(roi, blur_ksize, blur_sigma)
@@ -157,60 +164,79 @@ def blur_watermark_with_opencv(
 
 
 # TODO: update args 
-def detect_username(img_path):
+def detect_username(video_path):
     # 1. Load original (for drawing) and gray for OCR
-    img = cv2.imread(img_path)
-    if img is None:
-        raise FileNotFoundError(f"Image not found: {img_path}")
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # img = cv2.imread(video_path)
+    video = cv2.VideoCapture(video_path)
+    if not video.isOpened():
+        raise IOError(f"Cannot open video: {video_path}")
+    
+    fps = video.get(cv2.CAP_PROP_FPS)
+    
 
-    # 2. Get word-level OCR data
-    data = pytesseract.image_to_data(
-        gray,
-        output_type=pytesseract.Output.DICT,
-        config='--psm 6'  # single uniform block
-    )
+    # loop through the first 5 seconds of the video
+    frame_index = 0
+    while frame_index < int(fps * 5):
+        ret, frame = video.read()
 
-    # 3. Scan for standalone '@'
-    n = len(data['text'])
-    for i in range(n):
-        if data['text'][i].strip() == "@" and i + 1 < n:
-            # get '@' box
-            x0, y0, w0, h0 = (data['left'][i], data['top'][i],
-                              data['width'][i], data['height'][i])
-            # get username box
-            x1, y1, w1, h1 = (data['left'][i+1], data['top'][i+1],
-                              data['width'][i+1], data['height'][i+1])
+        # cv2.imshow("frame", img)
+        # cv2.waitKey(0)
+        if not ret:
+            break
 
-            # compute a bounding box that covers both
-            x = x0
-            y = min(y0, y1)
-            w = (x1 + w1) - x0
-            h = max(y0 + h0, y1 + h1) - y
+        img = frame.copy()
 
-            username = data['text'][i+1].strip()
-            print("Username detected:", username, "at", (x, y, w, h))
+        # 2. Convert to grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # 4. Draw rectangle and label
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(
-                img,
-                f"@{username}",
-                (x, y - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 255, 0),
-                2
-            )
+        # 3. Get word-level OCR data
+        data = pytesseract.image_to_data(
+            gray,
+            output_type=pytesseract.Output.DICT,    
+        )
 
-            # 5. Show and return
-            cv2.imshow("Username Detection", img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-            return (x, y, w, h)
+        n = len(data['text'])
+        frame_index += 1
+        for i in range(n):
+            if data['text'][i].strip() == "@" and i + 1 < n:
+                # get '@' box
+                x0, y0, w0, h0 = (data['left'][i], data['top'][i],
+                                data['width'][i], data['height'][i])
+                # get username box
+                x1, y1, w1, h1 = (data['left'][i+1], data['top'][i+1],
+                                data['width'][i+1], data['height'][i+1])
+
+                # compute a bounding box that covers both
+                x = x0
+                y = min(y0, y1)
+                w = (x1 + w1) - x0
+                h = max(y0 + h0, y1 + h1) - y
+
+                username = data['text'][i+1].strip()
+                print("Username detected:", username, "at", (x, y, w, h))
+
+                # 4. Draw rectangle and label
+                # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # cv2.putText(
+                #     img,
+                #     f"@{username}",
+                #     (x, y - 10),
+                #     cv2.FONT_HERSHEY_SIMPLEX,
+                #     0.6,
+                #     (0, 255, 0),
+                #     2
+                # )
+
+                # # 5. Show and return
+                # cv2.imshow("Username Detection", img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                return True, (x, y, w, h)
+
+    video.release()
 
     print("No username detected.")
-    return None
+    return False, None
 
 
 
@@ -220,6 +246,7 @@ if __name__ == "__main__":
     OUTPUT = "data/processed/blur_opencv.mp4"
     TEMPLATE = "assets/templates/tiktok_watermark_cropped.png"
 
-    # success = blur_watermark_with_opencv(INPUT, OUTPUT, TEMPLATE)
-    # print("Success:", success)
-    detect_username("data/raw/tiktok_img.png")
+    success = blur_watermark_with_opencv(INPUT, OUTPUT, TEMPLATE)
+    print("Success:", success)
+    detect_username("data/raw/tiktok3.mp4")
+    # detect_username("data/raw/tiktok1.mp4")
