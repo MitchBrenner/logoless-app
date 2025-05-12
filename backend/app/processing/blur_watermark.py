@@ -98,7 +98,20 @@ def detect_watermark_in_roi(
     print('No watermark detected in the specified ROI.')
     return False, None
 
+"""
+    Applies a Gaussian blur to the detected watermark region in a video.
+    This function uses OpenCV to read the video, apply the blur, and write
+    the output to a new video file.
+    Args:
 
+        input_video_path (str): Path to the input video file.
+        output_video_path (str): Path to the output video file.
+        template_path (str): Path to the cropped watermark image template.
+        blur_ksize (tuple): Kernel size for Gaussian blur.
+        blur_sigma (float): Standard deviation for Gaussian blur.
+    Returns:
+        bool: True if the watermark was blurred, False otherwise.
+"""
 def blur_watermark_with_opencv(
     input_video_path: str,
     output_video_path: str,
@@ -106,26 +119,31 @@ def blur_watermark_with_opencv(
     blur_ksize=(0, 0),
     blur_sigma=5
 ) -> bool:
-    # found, coords = detect_watermark_in_roi(
-    #     input_video_path,
-    #     template_path,
-    # )
-    found, coords = detect_username(input_video_path)
+
+    found, coords1, coords2, = detect_username(input_video_path)
     if not found:
         print("No watermark detected; skipping blur.")
         return False
 
-    x, y, w, h = coords
-
     cap = cv2.VideoCapture(input_video_path)
-    if not cap.isOpened():
-        raise IOError(f"Cannot open video: {input_video_path}")
-
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+
+    x1, y1, w1, h1 = coords1
+    if coords2 is None:
+        # TODO: create a better fallback incase the second username is not found
+        # x2, y2, w2, h2 = width - x1, y1 + 200, w1, h1
+        x2, y2, w2, h2 = x1, y1, w1, h1 
+    else: 
+        x2, y2, w2, h2 = coords2
+
+
+    if not cap.isOpened():
+        raise IOError(f"Cannot open video: {input_video_path}")
+
 
     frame_index = 0
     blur_switch_frame = int(fps * 5) + 1  # 5 seconds in
@@ -135,109 +153,104 @@ def blur_watermark_with_opencv(
         if not ret:
             break
         
-        # Default location (initial watermark position)
-        current_x, current_y = x, y
-
-        # Uncomment to see the rectangle drawn on the video
-        # cv2.rectangle(frame, (current_x, current_y), (current_x + w, current_y + h), (0, 255, 0), 2)
-
-        # After 5 seconds, switch to new position
-        if frame_index >= blur_switch_frame:
-            current_x = width - w - 8
-            current_y = height - h - 162
+        # choose which box to blur
+        if frame_index < blur_switch_frame:
+            cx, cy, cw, ch = x1, y1, w1, h1
+        else:
+            cx, cy, cw, ch = x2, y2, w2, h2
 
             # Uncomment to see the rectangle drawn on the video 
-            # cv2.rectangle(frame, (current_x, current_y), (current_x + w, current_y + h), (0, 255, 0), 2)
+            # cv2.rectangle(frame, (cx, cy), (cx + cw, cy + ch), (0, 255, 0), 2)
 
-        roi = frame[current_y:current_y + h, current_x:current_x + w]
+        # apply blur to that region
+        roi = frame[cy:cy + ch, cx:cx + cw]
         blurred = cv2.GaussianBlur(roi, blur_ksize, blur_sigma)
-        frame[current_y:current_y + h, current_x:current_x + w] = blurred
+        frame[cy:cy + ch, cx:cx + cw] = blurred
 
         out.write(frame)
         frame_index += 1
 
-    cap.release()
     out.release()
 
-    print(f"Blur applied at {(x, y, w, h)} initially, then moved after 5s.")
     return True
 
-
-# TODO: update args 
+"""
+    Detects the username in a video using Tesseract OCR.
+    This function scans the first 5 seconds of the video and then
+    seeks to the 5-second mark to find the username.
+    Args:
+        video_path (str): Path to the input video file.
+    Returns:
+        Tuple[bool, Tuple[int, int, int, int] or None, Tuple[int, int, int, int] or None]:
+            - True and bounding boxes (x, y, w, h) for both usernames if detected
+            - False and None if no username is found
+"""
 def detect_username(video_path):
-    # 1. Load original (for drawing) and gray for OCR
-    # img = cv2.imread(video_path)
     video = cv2.VideoCapture(video_path)
     if not video.isOpened():
         raise IOError(f"Cannot open video: {video_path}")
-    
+
     fps = video.get(cv2.CAP_PROP_FPS)
-    
+    first_coords = None
 
-    # loop through the first 5 seconds of the video
-    frame_index = 0
-    while frame_index < int(fps * 5):
+    # 1) Scan first 5 seconds for first username
+    for _ in range(int(fps * 5)):
         ret, frame = video.read()
-
-        # cv2.imshow("frame", img)
-        # cv2.waitKey(0)
         if not ret:
             break
 
-        img = frame.copy()
-
-        # 2. Convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        # 3. Get word-level OCR data
         data = pytesseract.image_to_data(
-            gray,
-            output_type=pytesseract.Output.DICT,    
+            gray, output_type=pytesseract.Output.DICT, config='--psm 6'
         )
-
-        n = len(data['text'])
-        frame_index += 1
-        for i in range(n):
-            if data['text'][i].strip() == "@" and i + 1 < n:
-                # get '@' box
-                x0, y0, w0, h0 = (data['left'][i], data['top'][i],
-                                data['width'][i], data['height'][i])
-                # get username box
-                x1, y1, w1, h1 = (data['left'][i+1], data['top'][i+1],
-                                data['width'][i+1], data['height'][i+1])
-
-                # compute a bounding box that covers both
+        for i, txt in enumerate(data['text']):
+            if txt.strip() == "@" and i + 1 < len(data['text']):
+                x0, y0 = data['left'][i], data['top'][i]
+                x1, y1 = data['left'][i+1], data['top'][i+1]
+                w1, h1 = data['width'][i+1], data['height'][i+1]
+                # combined box from '@' to username end
                 x = x0
                 y = min(y0, y1)
                 w = (x1 + w1) - x0
-                h = max(y0 + h0, y1 + h1) - y
+                h = max(y0 + data['height'][i], y1 + h1) - y
+                first_coords = (x, y, w, h)
+                break
+        if first_coords:
+            break
 
-                username = data['text'][i+1].strip()
-                print("Username detected:", username, "at", (x, y, w, h))
+    # seek to 5-second mark for second username
+    video.set(cv2.CAP_PROP_POS_MSEC, 5080)
+    second_coords = None
+    while True:
+        ret, frame = video.read()
+        if not ret:
+            break
 
-                # 4. Draw rectangle and label
-                # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                # cv2.putText(
-                #     img,
-                #     f"@{username}",
-                #     (x, y - 10),
-                #     cv2.FONT_HERSHEY_SIMPLEX,
-                #     0.6,
-                #     (0, 255, 0),
-                #     2
-                # )
-
-                # # 5. Show and return
-                # cv2.imshow("Username Detection", img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                return True, (x, y, w, h)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        data = pytesseract.image_to_data(
+            gray, output_type=pytesseract.Output.DICT, config='--psm 6'
+        )
+        for i, txt in enumerate(data['text']):
+            if txt.strip() == "@" and i + 1 < len(data['text']):
+                x0, y0 = data['left'][i], data['top'][i]
+                x1, y1 = data['left'][i+1], data['top'][i+1]
+                w1, h1 = data['width'][i+1], data['height'][i+1]
+                x = x0
+                y = min(y0, y1)
+                w = (x1 + w1) - x0
+                h = max(y0 + data['height'][i], y1 + h1) - y
+                second_coords = (x, y, w, h)
+                break
+        if second_coords:
+            break
 
     video.release()
 
-    print("No username detected.")
-    return False, None
-
+    if not first_coords and not second_coords:
+        print("No username detected.")
+        return False, None, None
+    print(f"Username detected at {first_coords} and {second_coords}.")
+    return True, first_coords, second_coords
 
 
 # Example usage to test the function
