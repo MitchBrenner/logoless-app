@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mitchell Brenner
+# Licensed under the GNU General Public License v3.0 (GPL-3.0-or-later)
+# See LICENSE for details.
+
 import cv2
  
 def detect_watermark_in_roi(

@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mitchell Brenner
+# Licensed under the GNU General Public License v3.0 (GPL-3.0-or-later)
+# See LICENSE for details.
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse
 import os
