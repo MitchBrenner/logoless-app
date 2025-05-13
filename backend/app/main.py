@@ -9,6 +9,7 @@ import tempfile
 import shutil
 
 from .processing.blur_watermark import blur_watermark_with_opencv
+from .processing.blur_watermark import blur_watermark
 
 app = FastAPI()
 
@@ -36,10 +37,15 @@ async def process_video(
         f.write(await file.read())
 
     # Run blur operation
-    success = blur_watermark_with_opencv(
+    # success = blur_watermark_with_opencv(
+    #     input_video_path=in_path,
+    #     output_video_path=out_path,
+    #     template_path="assets/templates/tiktok_watermark_cropped.png",
+    # )
+
+    success = blur_watermark(
         input_video_path=in_path,
         output_video_path=out_path,
-        template_path="assets/templates/tiktok_watermark_cropped.png",
     )
     if not success:
         # Clean up and return failure
