@@ -134,7 +134,7 @@ export default function UploadAndPlayVideo() {
         we’ll clean it up for you—instantly.
       </Text>
 
-      {!videoUri && (
+      {!videoUri && !uploading && (
         <TouchableOpacity
           style={styles.uploadButton}
           onPress={handlePickAndUpload}
@@ -144,7 +144,9 @@ export default function UploadAndPlayVideo() {
       )}
 
       {uploading && (
-        <ActivityIndicator style={{ marginTop: 20 }} size="large" />
+        <>
+          <ActivityIndicator style={{ marginTop: 20 }} size="large" />
+        </>
       )}
 
       {videoUri && (
