@@ -131,3 +131,8 @@ The result is a smoother, more predictable video upload experience for the user.
 - Detection interval is configurable (default 0.25 s; can be per-frame for max responsiveness).
 - macOS quirk: Current macOS PaddlePaddle builds require re-initializing the OCR model each pass, adding a slight delay. A one-time warm-up or upcoming allocator fix will remove this overhead.
 - If no watermark is detected, the server responds with { "success": false } — and the app alerts the user
+
+### Future Updates
+
+- Allow users to save and store videos in app until ready to save to device
+- Let users choose where to blur or modify the blur
