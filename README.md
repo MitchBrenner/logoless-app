@@ -138,3 +138,4 @@ The result is a smoother, more predictable video upload experience for the user.
 - Let users choose where to blur or modify the blur
 - Blur multiple at once
 - Update UI
+- Add auth
