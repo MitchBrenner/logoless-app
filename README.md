@@ -134,7 +134,7 @@ The result is a smoother, more predictable video upload experience for the user.
 
 ### Future Updates
 
-- Allow users to save and store videos in app until ready to save to device
+- Allow users to save and store videos in the app until ready to save to the device
 - Let users choose where to blur or modify the blur
 - Blur multiple at once
 - Update UI
