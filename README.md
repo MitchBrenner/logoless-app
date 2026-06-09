@@ -1,6 +1,6 @@
 # 🔥 LogoLess
 
-**Remove TikTok watermarks with ease.**  
+**Remove TikTok username watermarks with ease.**  
 LogoLess is a full-stack mobile app that allows users to upload TikTok videos and automatically blur out the username watermark using computer vision. The app detects the watermark region with OpenCV and applies a Gaussian blur, giving you a clean, share-ready video.
 
 ---
